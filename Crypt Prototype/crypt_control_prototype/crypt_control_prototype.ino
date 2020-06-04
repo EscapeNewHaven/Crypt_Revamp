@@ -106,8 +106,8 @@ void loop() {
 
     getADC();
     //printADC();                                       // WMS - I assume these should be un-commented back in?
-
-    //getPuzzle1Vals();
+                                                        // Also, we'll need some kind of Reset Handler that can
+    //getPuzzle1Vals();                                 // be triggered from any game state.
     //getPuzzle2Vals();
     //getPuzzle3Vals();
     //getPuzzle4Vals();
@@ -129,9 +129,9 @@ void getPuzzle1Vals() {
 
   if (ADC_ARRAY[0] == 1023) {                             // WMS - It looks like whenever the cabinet is open,
     filmCabinetOpen = !filmCabinetOpen;                   // it rapidly toggles the variable on and off?
-  }                                                       // Very likely that I just don't get how the ADC works.
+  }                                                       // Very likely that I just don't know how the ADC works.
                                                           
-  if (digitalRead(lightSwitchPin) == LOW) {
+  if (digitalRead(lightSwitchPin) == LOW) {               
     lightsOff = false;
     SoftPWMSet(lightbarLED, 200);
 
@@ -155,9 +155,9 @@ void getPuzzle1Vals() {
   Serial.println(puzzle1Sum);
 
   //If all conditions met, grant prize
-  if (puzzle1Sum == 3) {                                                // WMS - must be true for 10 sec.
+  if (puzzle1Sum == 3) {                              // WMS - must stay true for 10 continuous seconds
     Serial.println("SCARY MUSIC PLAYS");
-    Serial.println("LIGHTNING FLASHES");
+    Serial.println("LIGHTNING FLASHES");              // LED strip missing
     //delay(2000);
 
   }
