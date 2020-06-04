@@ -105,7 +105,7 @@ void loop() {
   if (cryptCurrent - cryptPrevious >= cryptInterval) {
 
     getADC();
-    //printADC();
+    //printADC();                                       // WMS - I assume these should be un-commented back in?
 
     //getPuzzle1Vals();
     //getPuzzle2Vals();
@@ -127,10 +127,10 @@ void getPuzzle1Vals() {
     standingStill = false;
   }
 
-  if (ADC_ARRAY[0] == 1023) {
-    filmCabinetOpen = !filmCabinetOpen;
-  }
-
+  if (ADC_ARRAY[0] == 1023) {                             // WMS - It looks like whenever the cabinet is open,
+    filmCabinetOpen = !filmCabinetOpen;                   // it rapidly toggles the variable on and off?
+  }                                                       // Very likely that I just don't get how the ADC works.
+                                                          
   if (digitalRead(lightSwitchPin) == LOW) {
     lightsOff = false;
     SoftPWMSet(lightbarLED, 200);
@@ -155,7 +155,7 @@ void getPuzzle1Vals() {
   Serial.println(puzzle1Sum);
 
   //If all conditions met, grant prize
-  if (puzzle1Sum == 3) {
+  if (puzzle1Sum == 3) {                                                // WMS - must be true for 10 sec.
     Serial.println("SCARY MUSIC PLAYS");
     Serial.println("LIGHTNING FLASHES");
     //delay(2000);
@@ -166,10 +166,10 @@ void getPuzzle1Vals() {
 
 void getPuzzle2Vals() {
 
-  if (ADC_ARRAY[1] == 1023) {
-    torch1Placed = !torch1Placed;
-  }
-  if (ADC_ARRAY[2] == 1023) {
+  if (ADC_ARRAY[1] == 1023) {                   // WMS - looks like these are all "latching" (or...."toggling");
+    torch1Placed = !torch1Placed;               // should be momentary, so if you remove one, it is no longer
+  }                                             // "solved."
+  if (ADC_ARRAY[2] == 1023) {                   // Also, should still listen for lightswitch
     torch2Placed = !torch2Placed;
   }
   if (ADC_ARRAY[3] == 1023) {
@@ -204,11 +204,11 @@ void getPuzzle2Vals() {
   Serial.print("\tPuzzle 2 Sum: ");
   Serial.println(puzzle2Sum);
 
-  if (puzzle2Sum == 5) {
-    SoftPWMSet(torchLED, 200);
+  if (puzzle2Sum == 5) {                          // WMS - I'd like a few seconds between completing the torches
+    SoftPWMSet(torchLED, 200);                    // and the coffin knocks.
     Serial.print("COFFIN KNOCKS");
     if (coffinOpen == true) {
-      Serial.print("\tCOFFIN OPEN");
+      Serial.print("\tCOFFIN OPEN");              // WMS - Coffin UV light strip not modeled?
     }
   } else {
     SoftPWMSet(torchLED, 0);
@@ -219,8 +219,8 @@ void getPuzzle2Vals() {
 
 void getPuzzle3Vals() {
 
-  if (ADC_ARRAY[7] == 1023) {
-    candlePlaced = !candlePlaced;
+  if (ADC_ARRAY[7] == 1023) {             // WMS - same comment about toggle vs. momentary
+    candlePlaced = !candlePlaced;         // Also, should still listen for lightswitch IFF sum < 5
   }
   if (ADC_ARRAY[8] == 1023) {
     skullPlaced = !skullPlaced;
@@ -256,9 +256,9 @@ void getPuzzle3Vals() {
   } else {
     SoftPWMSet(skullLED, 0);
   }
-
-  if (demon1Placed == true && demon2Placed == true && demon3Placed == true) {
-    //Demon LED ON
+    
+  if (demon1Placed == true && demon2Placed == true && demon3Placed == true) { 
+    //Demon LED ON                      // WMS - This if/else isn't necessary, but doesn't really hurt anything
   } else {
     //Demon LED OFF
   }
@@ -267,8 +267,8 @@ void getPuzzle3Vals() {
 
   Serial.print("\tPuzzle 3 Sum:");
   Serial.println(puzzle3sum);
-
-  if (puzzle3sum == 5) {
+    
+  if (puzzle3sum == 5) {                // WMS - turn lightbar off, signal audio cues, kill coffin UV
     SoftPWMSet(mirrorLED, 200);
     Serial.println("THE BEAST!!!!!");
   } else {
@@ -281,15 +281,15 @@ void getPuzzle4Vals() {
 
   Serial.println(ADC_ARRAY[13]);
 
-  if (ADC_ARRAY[13] >= touchThreshold) {
+  if (ADC_ARRAY[13] >= touchThreshold) {          // WMS - dim sconces, trigger audio, release maglock
     Serial.print("TOUCHING");
     Serial.println("\tESCAPED THE GAME!");
   }
 
 }
 
-void getADC() {
-
+void getADC() {                                     // WMS - any reason you're using analogRead()
+                                                    // instead of digitalRead()?
   for (size_t i = 0; i < adc1.numChannels(); ++i)
   {
     ADC_ARRAY[i] = adc1.analogRead(i);
