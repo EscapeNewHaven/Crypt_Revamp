@@ -6,36 +6,57 @@
   Justin C Kirk
   2020
 
-  Proof of concept code for testing inputs and outputs.
-
-  This version uses an Arduino Nano.
-
-  Two MCP3008 ADC chips are used to extend the number of inputs.
-
-  SoftPWM library is used to increase the number of pwm pins available.
-
-  In future prototypes, an Arduino Mega will be used and the ADC chips as well as SoftPWM library
-  will not be needed.
-
-
 */
 
 
-#include <MCP3XXX.h>
-MCP3008 adc1, adc2;
-#include <SoftPWM.h>
 
-//Two ADC chips are used for prototyping.
-//These two chips can read 16 inputs using 4 GPIO pins
-//This array stores values from 16 inputs.
-//The first 13 entries are button inputs
-//Entry 14 is the conductance sensor
-//The last two are left unused
-int ADC_ARRAY [16] = {};
 
-//gpio
-int motionSensor = 4;  //dressing room motion sensor
-int lightSwitchPin  = 2;
+
+// GPIOs
+
+//Puzzle 1
+int lightBarSwitch = 39;
+int motionSensorPin = 38;
+int filbCabinet = 37;
+int lightbarLED = 8;
+int lightingLED = 7;
+
+//Puzzle 2
+int torch1Reed = 36;
+int torch2Reed = 35;
+int torch3Reed = 34;
+int torch4Reed = 33;
+int torch5Reed = 32;
+int coffinReed = 31;
+
+int torchLED = 12;
+int coffinLED;
+
+//Puzzle 3
+int candleReed = 30;
+int skullReed = 29;
+int demon1Reed = 28;
+int demon2Reed = 27;
+int demon3Reed = 26;
+int candleLED = 11;
+int skullLED = 10;
+int mirrorLED = 9;
+
+//Puzzle 4
+int touchSensorPin = 0;  //analog 0
+
+//General
+int puzzle1Override = 25;
+int puzzle2Override = 24;
+int puzzle3Override = 23;
+int puzzle4Override = 22;
+int resetSwitch = 21;
+
+int inputCount = 19;
+int inputPins[inputCount] = {};
+int outputCount = 6;
+int outputPins[outputCount] = {};
+
 
 //Puzzle 1 Vals
 boolean lightsOff = false;
@@ -75,8 +96,16 @@ unsigned long cryptPrevious = 0;
 const long cryptInterval = 10;
 
 int cryptState = 0;
+boolean updateCrypt = false;
+
+int puzzle1 = 1;
+int puzzle2 = 2;
+int puzzle3 = 3;
+int puzzle4 = 4;
+
 
 void getCryptState(int i) {
+  updateCrypt = true;
   cryptState = i;
 }
 
@@ -84,19 +113,13 @@ void setup() {
 
   Serial.begin(115200);
 
-  adc1.begin(12, 11, 10, 9);
-  adc2.begin(8, 7, 6, 5);
+  for (int i = 0; i < inputCount; i++) {
+    pinMode(inputPins[i], INPUT_PULLUP);
+  }
 
-  SoftPWMBegin();
-  SoftPWMSet(lightbarLED, 0);
-  SoftPWMSet(torchLED, 0);
-  SoftPWMSet(candleLED, 0);
-  SoftPWMSet(skullLED, 0);
-  SoftPWMSet(mirrorLED, 0);
-
-  pinMode(motionSensor, INPUT_PULLUP);
-  pinMode(lightSwitchPin, INPUT_PULLUP);
-
+  for (int i = 0; i < outputCount; i++) {
+    pinMode(outputPins[i], OUTPUT);
+  }
 }
 
 void loop() {
@@ -104,18 +127,60 @@ void loop() {
   cryptCurrent = millis();
   if (cryptCurrent - cryptPrevious >= cryptInterval) {
 
-    getADC();
-    //printADC();
+    getResetState() ;
 
-    //getPuzzle1Vals();
-    //getPuzzle2Vals();
-    //getPuzzle3Vals();
-    //getPuzzle4Vals();
+    switch (cryptState) {
+      case puzzle1:
+        if (updateCrypt == true) {
+          //check stuff
+          updateCrypt = false;
+        }
+        //getPuzzle1Vals();
+        //check reset state
+        //check puzzle sensors
+        //check if puzzle is sovled
+        //if solved, go to next state
+        break;
 
+      case puzzle2:
+        if (updateCrypt == true) {
+          //check stuff
+          updateCrypt = false;
+        }
+        //getPuzzle2Vals();
+        //check reset state
+        //check puzzle sensors
+        //check if puzzle is sovled
+        //if solved, go to next state
+        break;
+
+      case puzzle3:
+        if (updateCrypt == true) {
+          //check stuff
+          updateCrypt = false;
+        }
+        //getPuzzle3Vals();
+        //check reset state
+        //check puzzle sensors
+        //check if puzzle is sovled
+        //if solved, go to next state
+        break;
+
+      case puzzle4:
+        if (updateCrypt == true) {
+          //check stuff
+          updateCrypt = false;
+        }
+        //getPuzzle4Vals();
+        //check reset state
+        //check puzzle sensors
+        //check if puzzle is sovled
+        //if solved, go to next state
+        break;
+
+    }
     cryptPrevious = cryptCurrent;
-
   }
-
 }
 
 void getPuzzle1Vals() {
@@ -186,7 +251,6 @@ void getPuzzle2Vals() {
     coffinOpen = !coffinOpen;
   }
 
-
   Serial.print(torch1Placed);
   Serial.print("\t");
   Serial.print(torch2Placed);
@@ -213,8 +277,6 @@ void getPuzzle2Vals() {
   } else {
     SoftPWMSet(torchLED, 0);
   }
-
-
 }
 
 void getPuzzle3Vals() {
@@ -285,51 +347,5 @@ void getPuzzle4Vals() {
     Serial.print("TOUCHING");
     Serial.println("\tESCAPED THE GAME!");
   }
-
-}
-
-void getADC() {
-
-  for (size_t i = 0; i < adc1.numChannels(); ++i)
-  {
-    ADC_ARRAY[i] = adc1.analogRead(i);
-  }
-
-  for (size_t j = 0; j < adc2.numChannels(); ++j)
-  {
-    ADC_ARRAY[8 + j] = adc2.analogRead(j);
-  }
-
-}
-
-void printADC() {
-
-  for (int i = 0; i < 16; i++) {
-    Serial.print(ADC_ARRAY[i]);
-    if (i == 15) {
-      Serial.println();
-    } else {
-      Serial.print("\t");
-    }
-  }
-
-  /*
-    for (int i = 0; i < 8; i++) {
-      Serial.print(adc_1_vals[i]);
-      if (i == 7) {
-        Serial.print(" : ");
-        for (int j = 0; j < 8; j++) {
-          Serial.print(adc_2_vals[j]);
-          if (j == 7) {
-            Serial.println();
-          } else {
-            Serial.print(" : ");
-          }
-        }
-      } else {
-        Serial.print(" : ");
-      }
-    }
-  */
 
 }
