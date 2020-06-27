@@ -171,7 +171,9 @@ boolean demonsPlaced = false;
 boolean puzzle3Complete = false;
 
 //Puzzle 4
-const int touchThreshold = 500;
+
+//Will need to adjust this for use with touch sensor
+const int touchThreshold = 4;
 boolean isTouching = false;
 boolean puzzle4Complete = false;
 
@@ -202,7 +204,7 @@ const int winnerState = 5;
 void getCryptState(const int i) {
 
   updateCrypt = true;
-  Serial.print("Getting State: ");
+  Serial.print(F("Getting State: "));
   Serial.println(i);
   cryptState = i;
 
@@ -272,11 +274,11 @@ void setup() {
   SD.begin(BOARD_SDCS);    // initialise the SD card
 
   if (!audioPlayer.begin()) {
-    Serial.println("Cannot find audio player.  Check pins.");
+    Serial.println(F("Cannot find audio player.  Check pins."));
   }
 
   if (!SD.begin(BOARD_SDCS)) {
-    Serial.println("SD read error.  Is card inserted?");
+    Serial.println(F("SD read error.  Is card inserted?"));
     //Turn on SD card error led?
   }
 
@@ -305,29 +307,37 @@ void checkResetSwitch() {
 void checkPuzzleOverrides() {
 
   puzzle1Override.update();
-  if (puzzle1Override.read() == 1) {
-    Serial.println("Puzzle 1 Override");
+  if (puzzle1Override.rose()) {
+    if (DEBUG) {
+      Serial.println(F("Puzzle 1 Override"));
+    }
     //audioPlayer.stopPlaying();
     puzzle1Complete = true;
   }
 
   puzzle2Override.update();
-  if (puzzle2Override.read() == 1) {
-    Serial.println("Puzzle 2 Override");
+  if (puzzle2Override.rose()) {
+    if (DEBUG) {
+      Serial.println(F("Puzzle 2 Override"));
+    }
     //audioPlayer.stopPlaying();
     puzzle2Complete = true;
   }
 
   puzzle3Override.update();
-  if (puzzle3Override.read() == 1) {
-    Serial.println("Puzzle 3 Override");
+  if (puzzle3Override.rose()) {
+    if (DEBUG) {
+      Serial.println(F("Puzzle 3 Override"));
+    }
     //audioPlayer.stopPlaying();
     puzzle3Complete = true;
   }
 
   puzzle4Override.update();
-  if (puzzle4Override.read() == 1) {
-    Serial.println("Puzzle 4 Override");
+  if (puzzle4Override.rose()) {
+    if (DEBUG) {
+      Serial.println(F("Puzzle 4 Override"));
+    }
     //audioPlayer.stopPlaying();
     puzzle4Complete = true;
   }
@@ -335,9 +345,6 @@ void checkPuzzleOverrides() {
 }
 
 void loop() {
-
-
-
 
   //    MAIN GAME
 
@@ -348,7 +355,7 @@ void loop() {
 
       if (updateCrypt == true) {
         if (DEBUG) {
-          Serial.println("RESET STATE");
+          Serial.println(F("RESET STATE"));
         }
 
         //Reset Puzzle 1
@@ -392,12 +399,12 @@ void loop() {
       //ledTest(0);
 
       //open all MagLocks
-      Serial.println("Open all maglocks");
+      Serial.println(F("Open all maglocks"));
       digitalWrite(filmCabinetMagLock, LOW);
       digitalWrite(coffinMagLock, LOW);
       delay(5000);
       //close all mag locks
-      Serial.println("Close all maglocks");
+      Serial.println(F("Close all maglocks"));
       digitalWrite(filmCabinetMagLock, HIGH);
       digitalWrite(coffinMagLock, HIGH);
 
@@ -411,7 +418,7 @@ void loop() {
 
       if (updateCrypt == true) {
         if (DEBUG) {
-          Serial.println("Puzzle 1");
+          Serial.println(F("Puzzle 1"));
         }
         digitalWrite(lightBarLED, LOW);
         digitalWrite(lightningLED, LOW);
@@ -478,16 +485,16 @@ void loop() {
                 standStillTime = 0;
                 audioPlayer.setVolume(0, 0);
                 if (DEBUG) {
-                  Serial.print("L: ");
+                  Serial.print(F("Lights Off: "));
                   Serial.print(lightsOff);
-                  Serial.print(" ");
-                  Serial.print("SS: ");
+                  Serial.print(F(" "));
+                  Serial.print(F("Standing Still: "));
                   Serial.print(standingStill);
-                  Serial.print(" ");
-                  Serial.print("FC: ");
+                  Serial.print(F(" "));
+                  Serial.print(F("Film Cabinet Open: "));
                   Serial.print(filmCabinetOpen);
-                  Serial.print(" ");
-                  Serial.print("Sum: ");
+                  Serial.print(F(" "));
+                  Serial.print(F("Sum: "));
                   Serial.println(puzzle1Sum);
                 }
               } else if (puzzle1Sum == 3) {
@@ -495,8 +502,8 @@ void loop() {
                 standStillTime += 1;
                 if (standStillTime >= 100) {
                   puzzle1Complete = true;
-                audioPlayer.stopPlaying();
-                  Serial.println("Puzzle 1 complete");
+                  audioPlayer.stopPlaying();
+                  Serial.println(F("Puzzle 1 complete"));
                   // playFileFlag = 0;
                   //puzzle1State = puzzle1B;
                 } else if (standStillTime < 100) {
@@ -504,13 +511,13 @@ void loop() {
                 }
 
                 if (DEBUG) {
-                  Serial.print("Standing Stil For : ");
+                  Serial.print(F("Standing Stil For : "));
                   Serial.println(standStillTime);
                 }
               }
 
               if (puzzle1Complete == true) {
-                Serial.println("Puzzle 1 Complete");
+                Serial.println(F("Puzzle 1 Complete"));
                 audioPlayer.stopPlaying();
                 playFileFlag = 1;
                 puzzle1State = puzzle1B;
@@ -552,7 +559,6 @@ void loop() {
           if (audioPlayer.stopped()) {
             // playFileFlag = 1;
             getCryptState(puzzle2);
-            // Serial.println("Song Stop");
           }
           break;
       }
@@ -563,7 +569,7 @@ void loop() {
 
       if (updateCrypt == true) {
         if (DEBUG) {
-          Serial.println("Puzzle 2");
+          Serial.println(F("Puzzle 2"));
         }
         puzzle2Complete = false;
         analogWrite(torchLED, 0);
@@ -591,9 +597,16 @@ void loop() {
 
       while (audioPlayer.playingMusic) {
 
-
         checkResetSwitch();
-        checkPuzzleOverrides();
+        //checkPuzzleOverrides();
+        puzzle2Override.update();
+
+        if (puzzle2Override.read() == 1) {
+          Serial.println(F("Puzzle 2 Override"));
+          audioPlayer.stopPlaying();
+          puzzle2Complete = true;
+          getCryptState(puzzle3);
+        }
 
         lightBarSwitch.update();
         torch1Reed.update();
@@ -601,7 +614,6 @@ void loop() {
         torch3Reed.update();
         torch4Reed.update();
         torch5Reed.update();
-        coffinReed.update();
 
         if (lightBarSwitch.read() == 1) {
           lightsOff = true;
@@ -648,25 +660,25 @@ void loop() {
 
           if (torchValSum < 5) {
             if (DEBUG) {
-              Serial.print("T1: ");
+              Serial.print(F("T1: "));
               Serial.print(torch1Placed);
-              Serial.print(" ");
-              Serial.print("T2: ");
+              Serial.print(F(" "));
+              Serial.print(F("T2: "));
               Serial.print(torch2Placed);
-              Serial.print(" ");
-              Serial.print("T3: ");
+              Serial.print(F(" "));
+              Serial.print(F("T3: "));
               Serial.print(torch3Placed);
-              Serial.print(" ");
-              Serial.print("T4: ");
+              Serial.print(F(" "));
+              Serial.print(F("T4: "));
               Serial.print(torch4Placed);
-              Serial.print(" ");
-              Serial.print("T5: ");
+              Serial.print(F(" "));
+              Serial.print(F("T5: "));
               Serial.print(torch5Placed);
-              Serial.print(" ");
-              Serial.print("C: ");
-              Serial.print(coffinOpen);
-              Serial.print(" ");
-              Serial.print("T Sum: ");
+              Serial.print(F(" "));
+              // Serial.print("C: ");
+              // Serial.print(coffinOpen);
+              //  Serial.print(" ");
+              Serial.print(F("T Sum: "));
               Serial.println(torchValSum);
             }
 
@@ -674,11 +686,11 @@ void loop() {
             analogWrite(coffinUVLED, 0);
 
           } else if (torchValSum == 5) {
-
             if (DEBUG) {
-              Serial.println("Torches Placed");
+              Serial.println(F("Torches Placed"));
             }
             puzzle2Complete = true;
+
           }
 
           if (puzzle2Complete == true) {
@@ -687,12 +699,13 @@ void loop() {
             if (torchLEDVal >= 255 || torchLEDVal <= 0) {
               torchIncrement = -torchIncrement;
             }
-
             analogWrite(torchLED, torchLEDVal);
 
             //Open mag lock
+            //Double check state
+            //digitalWrite(coffinMagLock, HIGH);
 
-
+            coffinReed.update();
             //Count times coffin has been opened.
             if (coffinReed.fell()) {
               coffinOpen = true;
@@ -701,9 +714,13 @@ void loop() {
               coffinOpen = false;
               coffinOpenCounter += 1;
             }
+
             //If coffin lid opens once then is closed, the LED turns on
             if (coffinOpenCounter % 2 == 0 && coffinOpenCounter > 0) {
+
               analogWrite(coffinUVLED, 255);
+              audioPlayer.stopPlaying();
+              getCryptState(puzzle3);
             } else {
               analogWrite(coffinUVLED, 0);
             }
@@ -712,20 +729,19 @@ void loop() {
               Serial.println(coffinOpenCounter);
             }
 
-            getCryptState(puzzle3);
 
           }
-
           cryptPrevious = cryptCurrent;
         }
       }
+
       break;
 
     case puzzle3:
 
       if (updateCrypt == true) {
         if (DEBUG) {
-          Serial.println("Puzzle 3");
+          Serial.println(F("Puzzle 3"));
         }
 
         analogWrite(candleLED, 0);
@@ -762,12 +778,14 @@ void loop() {
             checkPuzzleOverrides();
 
             lightBarSwitch.update();
+            coffinReed.update();
             candleReed.update();
             skullReed.update();
             demon1Reed.update();
             demon2Reed.update();
             demon3Reed.update();
 
+            //Keep lightbar switch active
             if (lightBarSwitch.read() == 1) {
               lightsOff = true;
               analogWrite(lightBarLED, 0);
@@ -776,24 +794,36 @@ void loop() {
               analogWrite(lightBarLED, 200);
             }
 
-
-            torchLEDVal += torchIncrement;
-            if (torchLEDVal >= 255 || torchLEDVal <= 0) {
-              torchIncrement = -torchIncrement;
+            //Keep coffin elements going
+            if (coffinReed.fell()) {
+              coffinOpen = true;
+              coffinOpenCounter += 1;
+            } else if (coffinReed.rose()) {
+              coffinOpen = false;
+              coffinOpenCounter += 1;
             }
-            analogWrite(torchLED, torchLEDVal);
 
+            if (coffinOpenCounter % 2 == 0 && coffinOpenCounter > 0) {
+              analogWrite(coffinUVLED, 255);
+            } else {
+              analogWrite(coffinUVLED, 0);
+            }
 
             if (candleReed.fell()) {
               candlePlaced = true;
+              analogWrite(candleLED, 255);
             } else if (candleReed.rose()) {
               candlePlaced = false;
+              analogWrite(candleLED, 0);
             }
 
             if (skullReed.fell()) {
-              torch2Placed = true;
+              skullPlaced = true;
+              analogWrite(skullLED, 255);
             } else if (skullReed.rose()) {
-              torch2Placed = false;
+              skullPlaced = false;
+              analogWrite(skullLED, 0);
+
             }
 
             if (demon1Reed.fell()) {
@@ -817,27 +847,37 @@ void loop() {
             cryptCurrent = millis();
             if (cryptCurrent - cryptPrevious >= cryptInterval) {
 
+              //Keep pulsing the torches
+              torchLEDVal += torchIncrement;
+              if (torchLEDVal >= 255 || torchLEDVal <= 0) {
+                torchIncrement = -torchIncrement;
+              }
+              analogWrite(torchLED, torchLEDVal);
+
+
+
+
               int puzzle3Sum = candlePlaced + skullPlaced + demon1Placed + demon2Placed + demon3Placed;
 
               if (puzzle3Sum < 5) {
 
                 if (DEBUG) {
-                  Serial.print("Candle: ");
+                  Serial.print(F("Candle: "));
                   Serial.print(candlePlaced);
-                  Serial.print(" ");
-                  Serial.print("Skull: ");
+                  Serial.print(F(" "));
+                  Serial.print(F("Skull: "));
                   Serial.print(skullPlaced);
-                  Serial.print(" ");
-                  Serial.print("Demon 1: ");
+                  Serial.print(F(" "));
+                  Serial.print(F("Demon 1: "));
                   Serial.print(demon1Placed);
-                  Serial.print(" ");
-                  Serial.print("Demon 2: ");
+                  Serial.print(F(" "));
+                  Serial.print(F("Demon 2: "));
                   Serial.print(demon2Placed);
-                  Serial.print(" ");
-                  Serial.print("Demon 3: ");
+                  Serial.print(F(" "));
+                  Serial.print(F("Demon 3: "));
                   Serial.print(demon3Placed);
-                  Serial.print(" ");
-                  Serial.print("Puzzle 3 Sum: ");
+                  Serial.print(F(" "));
+                  Serial.print(F("Puzzle 3 Sum: "));
                   Serial.println(puzzle3Sum);
                 }
 
@@ -845,17 +885,17 @@ void loop() {
 
               } else if (puzzle3Sum == 5) {
                 puzzle3Complete = true;
-                audioPlayer.stopPlaying();
               }
 
               if (puzzle3Complete == true) {
                 if (DEBUG) {
-                  Serial.println("!!!!!THE BEAST!!!!!");
+                  Serial.println(F("!!!!!THE BEAST!!!!!"));
                 }
-                playFileFlag = 3;
+                analogWrite(mirrorLED, 255);
+                audioPlayer.stopPlaying();
+                playFileFlag = 1;
                 puzzle3State = puzzle3B;
               }
-
               cryptPrevious = cryptCurrent;
             }
           }
@@ -881,16 +921,13 @@ void loop() {
             getCryptState(puzzle4);
           }
           break;
-
       }
-
-
       break;
 
     case puzzle4:
       if (updateCrypt == true) {
         if (DEBUG) {
-          Serial.println("Puzzle 4");
+          Serial.println(F("Puzzle 4"));
         }
         trackIndex = 3;//play scary music?
         puzzle4Complete = false;
@@ -914,14 +951,17 @@ void loop() {
         cryptCurrent = millis();
         if (cryptCurrent - cryptPrevious >= cryptInterval) {
 
+          //Keep pulsing torch leds?
+          //Keep coffin elements going?
+
           //May need to adjust threshold
           int touchVal = analogRead(touchSensorPin);
-          if (touchVal > touchThreshold) {
+          if (touchVal < touchThreshold) {
             if (DEBUG) {
-              Serial.print("Touch Val: ");
+              Serial.print(F("Touch Val: "));
               Serial.println(touchVal);
             }
-          } else if (touchVal < touchThreshold) {
+          } else if (touchVal > touchThreshold) {
             puzzle4Complete = true;
           }
 
@@ -933,9 +973,10 @@ void loop() {
 
           if (puzzle4Complete == true) {
             if (DEBUG ) {
-              Serial.println("ESCAPED THE GAME!!");
+              Serial.println(F("ESCAPED THE GAME!!"));
             }
             delay(2000);
+            playFileFlag = 1;
             audioPlayer.stopPlaying();
             getCryptState(winnerState);
           }
@@ -950,8 +991,8 @@ void loop() {
 
       if (updateCrypt == true) {
         if (DEBUG) {
-          Serial.println("Winner State");
-          Serial.println("Congrats!");
+          Serial.println(F("Winner State"));
+          Serial.println(F("Congrats!"));
         }
         trackIndex = 5;//play end music
         puzzle4Complete = false;
@@ -964,6 +1005,7 @@ void loop() {
         audioPlayer.startPlayingFile(trackNames[trackIndex]);
         playFileFlag -= 1;
       }
+
       if (audioPlayer.stopped()) {
         //playFileFlag = 1;
         getCryptState(resetState);
@@ -1004,7 +1046,6 @@ void puzzleInputTest() {
 
 void printDirectory(File dir, int numTabs) {
   while (true) {
-
     File entry =  dir.openNextFile();
     if (! entry) {
       //Serial.println("**nomorefiles**");
