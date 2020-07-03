@@ -11,8 +11,12 @@
 //Set to 0 to stop printing
 #define DEBUG 1
 
-//Used for reed switch or button inputs
+//Bounce library is used to handle inputs
+//It has a few helper functions and features including handling debouncing
+//https://github.com/thomasfredericks/Bounce2
+
 #include <Bounce2.h>
+
 
 // Audio Setup
 //Libraries for audio player
@@ -39,170 +43,171 @@ const int BOARD_SDCS = 46;
 // See https://www.arduino.cc/reference/en/language/functions/external-interrupts/attachinterrupt/
 const int BOARD_DREQ = 21;
 
-//Create object
+//Create audio player object
 Adafruit_VS1053_FilePlayer audioPlayer = Adafruit_VS1053_FilePlayer(BOARD_RESET, BOARD_CS, BOARD_XDCS, BOARD_DREQ, BOARD_SDCS);
 
+//cue a song to play
 int playFileFlag = -1;
+//Track names are limited to 8 characters
 char* trackNames[] = {"test.mp3", "play.mp3", "thunder.mp3", "scary.mp3", "beast.mp3", "END.mp3"};
 int trackIndex = -1;
+
+
 
 //Inputs
 
 //Puzzle 1
-const int lightBarSwitchPin = 14;
+const int LIGHT_BAR_SWITCH_PIN = 14;
 Bounce lightBarSwitch = Bounce();
-const int motionSensorPin = 15;
-//Bounce motionSensor = Bounce();
 
-const int filmCabinetReedPin = 39;
+const int MOTION_SENSOR_PIN = 15;
+Bounce motionSensor = Bounce();
+
+const int FILM_CABINET_REED_PIN = 39;
 Bounce filmCabinetReed = Bounce();
 
 //Puzzle 2
-const int torch1ReedPin = 37;
+const int TORCH_1_REED_PIN = 37;
 Bounce torch1Reed = Bounce();
-const int torch2ReedPin = 36;
+const int TORCH_2_REED_PIN = 36;
 Bounce torch2Reed = Bounce();
-const int torch3ReedPin = 35;
+const int TORCH_3_REED_PIN = 35;
 Bounce torch3Reed = Bounce();
-const int torch4ReedPin = 34;
+const int TORCH_4_REED_PIN = 34;
 Bounce torch4Reed = Bounce();
-const int torch5ReedPin = 33;
+const int TORCH_5_REED_PIN = 33;
 Bounce torch5Reed = Bounce();
-const int coffinReedPin = 32;
+const int COFFIN_REED_PIN = 32;
 Bounce coffinReed = Bounce();
 
 //Puzzle 3
-const int candleReedPin  = 31;
+const int CANDLE_REED_PIN  = 31;
 Bounce candleReed = Bounce();
-const int skullReedPin  = 30;
+const int SKULL_REED_PIN  = 30;
 Bounce skullReed = Bounce();
-const int demon1ReedPin  = 29;
+const int DEMON_1_REED_PIN  = 29;
 Bounce demon1Reed = Bounce();
-const int demon2ReedPin  = 28;
+const int DEMON_2_REED_PIN  = 28;
 Bounce demon2Reed = Bounce();
-const int demon3ReedPin  = 27;
+const int DEMON_3_REED_PIN  = 27;
 Bounce demon3Reed = Bounce();
 
 //Puzzle 4
-const int touchSensorPin = 0;  //analog 0
+const int TOUCH_SENSOR_PIN = 0;  //analog 0
 
 //General
-const int puzzle1OverridePin = 26;
+const int PUZZLE_1_OVERRIDE_PIN = 26;
 Bounce puzzle1Override = Bounce();
-const int puzzle2OverridePin = 25;
+const int PUZZLE_2_OVERRIDE_PIN = 25;
 Bounce puzzle2Override = Bounce();
-const int puzzle3OverridePin = 24;
+const int PUZZLE_3_OVERRIDE_PIN = 24;
 Bounce puzzle3Override = Bounce();
-const int puzzle4OverridePin = 23;
+const int PUZZLE_4_OVERRIDE_PIN = 23;
 Bounce puzzle4Override = Bounce();
 
-const int resetSwitchPin = 22;
+const int RESET_SWITCH_PIN = 22;
 Bounce resetSwitch = Bounce();
-
-const int inputPins[] = {lightBarSwitchPin , motionSensorPin, filmCabinetReedPin ,
-                         torch1ReedPin , torch2ReedPin , torch3ReedPin , torch4ReedPin , torch5ReedPin , coffinReedPin,
-                         candleReedPin , skullReedPin , demon1ReedPin , demon2ReedPin , demon3ReedPin ,
-                         puzzle1OverridePin, puzzle2OverridePin, puzzle3OverridePin, puzzle4OverridePin, resetSwitchPin
-                        };
-
-const int inputCount = sizeof(inputPins) / 2;
-
 
 
 //Outputs
 
 //Puzzle 1
-const int lightBarLED = 12;
-const int lightningLED = 11;
-const int filmCabinetMagLock = 4;
+const int LIGHT_BAR_LED = 12;
+const int LIGHTNING_LED = 11;
+const int CRYPT_DOOR_MAGLOCK = 4;
 
 //Puzzle 2
-const int torchLED = 10;
-const int coffinUVLED = 9;
-const int coffinMagLock = 3;
+const int TORCH_LED = 10;
+const int COFFIN_UVLED = 9;
 
 //Puzzle 3
-const int candleLED = 8;
-const int skullLED = 7;
-const int mirrorLED = 6;
+const int CANDLE_LED = 8;
+const int SKULL_LED = 7;
+const int MIRROR_LED = 6;
 
 //Puzzle 4
-
-
-const int leds[] = {lightBarLED, lightningLED, torchLED, coffinUVLED, candleLED, skullLED, mirrorLED};
-const int ledCount = sizeof(leds) / 2;
+//no outputs
 
 
 //Game Variables
 
 //Puzzle 1
-boolean lightsOff = false;
-boolean standingStill = false;
+//const int STAND_STILL_TIME = 10000;
 int standStillTime = 0;
-boolean filmCabinetOpen = false;
-boolean puzzle1Conditions[] = {lightsOff, standingStill, filmCabinetOpen };
-boolean puzzle1Complete = false;
+
+boolean bLightsOff = false;
+boolean bStandingStill = false;
+boolean bFilmCabinetOpen = false;
+boolean bPuzzle1Complete = false;
+boolean bLightningFlash  = false;
+
 
 //Puzzle 2
-boolean torch1Placed = false;
-boolean torch2Placed = false;
-boolean torch3Placed = false;
-boolean torch4Placed = false;
-boolean torch5Placed = false;
-boolean coffinOpen = false;
-int coffinOpenCounter = 0;
+boolean bTorch1Placed = false;
+boolean bTorch2Placed = false;
+boolean bTorch3Placed = false;
+boolean bTorch4Placed = false;
+boolean bTorch5Placed = false;
+boolean bCoffinOpen = false;
+boolean bCoffinOpenFirstTime = false;
+
 unsigned long torchCurrent = 0;
 unsigned long torchPrevious = 0;
-const long torchInterval = 100;
+const long TORCH_INTERVAL = 100;
 int torchIncrement = 5;
 int torchLEDVal = 0;
 
-boolean torchesPlaced = false;
-boolean puzzle2Conditions[] = {torch1Placed, torch2Placed, torch3Placed, torch4Placed, torch5Placed, coffinOpen};
-boolean puzzle2Complete = false;
+boolean bTorchesPlaced = false;
+boolean bPuzzle2Complete = false;
 
 //Puzzle 3
-boolean candlePlaced = false;
-boolean skullPlaced = false;
-boolean demon1Placed = false;
-boolean demon2Placed = false;
-boolean demon3Placed = false;
-boolean demonsPlaced = false;
-boolean puzzle3Complete = false;
+boolean bCandlePlaced = false;
+boolean bSkullPlaced = false;
+boolean bDemon1Placed = false;
+boolean bDemon2Placed = false;
+boolean bDemon3Placed = false;
+boolean bPuzzle3Complete = false;
 
 //Puzzle 4
-const int touchThreshold = 500;
-boolean isTouching = false;
-boolean puzzle4Complete = false;
+//Will need to adjust vakue for use with touch sensor
+const int TOUCH_THRESHOLD = 500;
+boolean bIsTouching = false;
+boolean bPuzzle4Complete = false;
 
 
 //General
+
+//Time in millis button needs to be held to trigger override
+const int PUZZLE_OVERRIDE_INTERVAL = 10000;
+//Time in millis button needs to be held to trigger reset
+const int RESET_SWITCH_INTERVAL = 10000;
+
 unsigned long cryptCurrent = 0;
 unsigned long cryptPrevious = 0;
-const long cryptInterval = 100;
+const long CRYPT_INTERVAL = 100;
 
 int cryptState = -1;
-boolean updateCrypt = false;
+boolean bUpdateCrypt = false;
 int puzzle1State = -1;
 int puzzle3State = -1;
 
 //Game States
 //Puzzle 1 and 3 need sub states to handle the different audio tracks being played
-const int puzzle1 = 1;
-const int puzzle1A = 10;
-const int puzzle1B = 11;
-const int puzzle2 = 2;
-const int puzzle3 = 3;
-const int puzzle3A = 30;
-const int puzzle3B = 31;
-const int puzzle4 = 4;
-const int resetState = 0;
-const int winnerState = 5;
+const int PUZZLE_1 = 1;
+const int PUZZLE_1_A = 10;
+const int PUZZLE_1_B = 11;
+const int PUZZLE_2 = 2;
+const int PUZZLE_3 = 3;
+const int PUZZLE_3_A = 30;
+const int PUZZLE_3_B = 31;
+const int PUZZLE_4 = 4;
+const int RESET_STATE = 0;
+const int WINNER_STATE = 5;
 
 void getCryptState(const int i) {
 
-  updateCrypt = true;
-  Serial.print("Getting State: ");
+  bUpdateCrypt = true;
+  Serial.print(F("Getting State: "));
   Serial.println(i);
   cryptState = i;
 
@@ -213,70 +218,78 @@ void setup() {
   Serial.begin(115200);
 
   //Setup Inputs
+  //attach() creates the Bounce object and sets up the pin as an input
+  //interval() sets the debounce time in millis
+
   //Puzzle 1
-  //lightBarSwitch.attach(lightBarSwitchPin, INPUT_PULLUP);
-  lightBarSwitch.attach(lightBarSwitchPin);
+  lightBarSwitch.attach(LIGHT_BAR_SWITCH_PIN, INPUT_PULLUP);
   lightBarSwitch.interval(25);
-  filmCabinetReed.attach(filmCabinetReedPin, INPUT_PULLUP);
+  motionSensor.attach(MOTION_SENSOR_PIN, INPUT_PULLUP);
+  motionSensor.interval(25);
+  filmCabinetReed.attach(FILM_CABINET_REED_PIN, INPUT_PULLUP);
   filmCabinetReed.interval(25);
 
   //Puzzle 2
-  torch1Reed.attach(torch1ReedPin);
+  torch1Reed.attach(TORCH_1_REED_PIN, INPUT_PULLUP);
   torch1Reed.interval(25);
-  torch2Reed.attach(torch2ReedPin);
+  torch2Reed.attach(TORCH_2_REED_PIN, INPUT_PULLUP);
   torch2Reed.interval(25);
-  torch3Reed.attach(torch3ReedPin);
+  torch3Reed.attach(TORCH_3_REED_PIN, INPUT_PULLUP);
   torch3Reed.interval(25);
-  torch4Reed.attach(torch4ReedPin);
+  torch4Reed.attach(TORCH_4_REED_PIN, INPUT_PULLUP);
   torch4Reed.interval(25);
-  torch5Reed.attach(torch5ReedPin);
+  torch5Reed.attach(TORCH_5_REED_PIN, INPUT_PULLUP);
   torch5Reed.interval(25);
-  coffinReed.attach(coffinReedPin);
+  coffinReed.attach(COFFIN_REED_PIN, INPUT_PULLUP);
   coffinReed.interval(25);
 
   //Puzzle 3
-  candleReed.attach(candleReedPin);
+  candleReed.attach(CANDLE_REED_PIN, INPUT_PULLUP);
   candleReed.interval(25);
-  skullReed.attach(skullReedPin);
+  skullReed.attach(SKULL_REED_PIN, INPUT_PULLUP);
   skullReed.interval(25);
-  demon1Reed.attach(demon1ReedPin);
+  demon1Reed.attach(DEMON_1_REED_PIN, INPUT_PULLUP);
   demon1Reed.interval(25);
-  demon2Reed.attach(demon2ReedPin);
+  demon2Reed.attach(DEMON_2_REED_PIN, INPUT_PULLUP);
   demon2Reed.interval(25);
-  demon3Reed.attach(demon3ReedPin);
+  demon3Reed.attach(DEMON_3_REED_PIN, INPUT_PULLUP);
   demon3Reed.interval(25);
 
   //General
-  puzzle1Override.attach(puzzle1OverridePin);
+  puzzle1Override.attach(PUZZLE_1_OVERRIDE_PIN, INPUT_PULLUP);
   puzzle1Override.interval(25);
-  puzzle2Override.attach(puzzle2OverridePin);
+  puzzle2Override.attach(PUZZLE_2_OVERRIDE_PIN, INPUT_PULLUP);
   puzzle2Override.interval(25);
-  puzzle3Override.attach(puzzle3OverridePin);
+  puzzle3Override.attach(PUZZLE_3_OVERRIDE_PIN, INPUT_PULLUP);
   puzzle3Override.interval(25);
-  puzzle4Override.attach(puzzle4OverridePin);
+  puzzle4Override.attach(PUZZLE_4_OVERRIDE_PIN, INPUT_PULLUP);
   puzzle4Override.interval(25);
-  resetSwitch.attach(resetSwitchPin);
+  resetSwitch.attach(RESET_SWITCH_PIN);
   resetSwitch.interval(25);
 
   //Setup Outputs
-  for (int i = 0; i < ledCount; i++) {
-    pinMode(leds[i], OUTPUT);
-    analogWrite(leds[i], 0);
-  }
-
-  pinMode(filmCabinetMagLock, OUTPUT);
-  pinMode(coffinMagLock, OUTPUT);
+  //For Arduino Mega, pins 2-13 are all PWM enabled
+  pinMode(LIGHT_BAR_LED, OUTPUT);
+  pinMode(LIGHTNING_LED, OUTPUT);
+  pinMode(CRYPT_DOOR_MAGLOCK, OUTPUT);
+  pinMode(TORCH_LED, OUTPUT);
+  pinMode(COFFIN_UVLED, OUTPUT);
+  pinMode(CANDLE_LED, OUTPUT);
+  pinMode(SKULL_LED, OUTPUT);
+  pinMode(MIRROR_LED, OUTPUT);
+  delay(1000);
 
   audioPlayer.begin();
+  //Enable the player to use a hardware interrupt pin
   audioPlayer.useInterrupt(VS1053_FILEPLAYER_PIN_INT);
   SD.begin(BOARD_SDCS);    // initialise the SD card
 
   if (!audioPlayer.begin()) {
-    Serial.println("Cannot find audio player.  Check pins.");
+    Serial.println(F("Cannot find audio player.  Check pins."));
   }
 
   if (!SD.begin(BOARD_SDCS)) {
-    Serial.println("SD read error.  Is card inserted?");
+    Serial.println(F("SD read error.  Is card inserted?"));
     //Turn on SD card error led?
   }
 
@@ -286,242 +299,272 @@ void setup() {
   audioPlayer.setVolume(0, 0);
   //Play test file to confirm audio player is working
   trackIndex = 0;
-  audioPlayer.playFullFile("test.mp3");
+  audioPlayer.playFullFile(trackNames[trackIndex]);
+  //audioPlayer.playFullFile("test.mp3");
 
   if (audioPlayer.stopped()) {
-    getCryptState(resetState);
+    getCryptState(RESET_STATE);
   }
+
 }
 
-void checkResetSwitch() {
-  //Check Reset State
+
+void checkResetSwitch(int holdDuration) {
+
   resetSwitch.update();
-  if (resetSwitch.read() == 1) {
-    audioPlayer.stopPlaying();
-    getCryptState(resetState);
-  }
-}
 
-void checkPuzzleOverrides() {
+  if (resetSwitch.read() == 1) {
+    if (resetSwitch.duration() > holdDuration) {
+      audioPlayer.stopPlaying();
+      getCryptState(RESET_STATE);
+    }
+  }
+
+}
+void checkPuzzleOverrides(int holdDuration) {
 
   puzzle1Override.update();
-  if (puzzle1Override.read() == 1) {
-    Serial.println("Puzzle 1 Override");
-    //audioPlayer.stopPlaying();
-    puzzle1Complete = true;
-  }
-
   puzzle2Override.update();
-  if (puzzle2Override.read() == 1) {
-    Serial.println("Puzzle 2 Override");
-    //audioPlayer.stopPlaying();
-    puzzle2Complete = true;
-  }
-
   puzzle3Override.update();
-  if (puzzle3Override.read() == 1) {
-    Serial.println("Puzzle 3 Override");
-    //audioPlayer.stopPlaying();
-    puzzle3Complete = true;
+  puzzle4Override.update();
+
+  if (puzzle1Override.read() == 1) {
+    if (DEBUG) {
+      Serial.print("Puzzle 1 Override: ");
+      Serial.println(puzzle1Override.duration());
+    }
+    if (puzzle1Override.duration() > holdDuration) {
+      bPuzzle1Complete = true;
+    }
   }
 
-  puzzle4Override.update();
-  if (puzzle4Override.read() == 1) {
-    Serial.println("Puzzle 4 Override");
-    //audioPlayer.stopPlaying();
-    puzzle4Complete = true;
+  if (puzzle2Override.read() == 1) {
+    if (DEBUG) {
+      Serial.print("Puzzle 2 Override: ");
+      Serial.println(puzzle2Override.duration());
+    }
+    if (puzzle2Override.duration() > holdDuration) {
+      bPuzzle2Complete = true;
+    }
   }
+
+  if (puzzle3Override.read() == 1) {
+    if (DEBUG) {
+      Serial.print("Puzzle 3 Override: ");
+      Serial.println(puzzle3Override.duration());
+    }
+    if (puzzle3Override.duration() > holdDuration) {
+      bPuzzle3Complete = true;
+    }
+  }
+
+  if (puzzle4Override.read() == 1) {
+    if (DEBUG) {
+      Serial.print("Puzzle 4 Override: ");
+      Serial.println(puzzle4Override.duration());
+    }
+    if (puzzle4Override.duration() > holdDuration) {
+      bPuzzle4Complete = true;
+    }
+  }
+
 
 }
 
 void loop() {
 
-
-
-
   //    MAIN GAME
 
+  audioPlayer.feedBuffer();
 
   switch (cryptState) {
 
-    case resetState:
+    case RESET_STATE:
 
-      if (updateCrypt == true) {
+      if (bUpdateCrypt == true) {
         if (DEBUG) {
-          Serial.println("RESET STATE");
+          Serial.println(F("RESET STATE"));
         }
 
         //Reset Puzzle 1
-        analogWrite(lightningLED, 0);
-        puzzle1Complete = false;
+        analogWrite(LIGHTNING_LED, 0);
+        bPuzzle1Complete = false;
         puzzle1State = -1;
-        lightsOff = false;
-        standingStill = false;
-        filmCabinetOpen = false;
+        bLightsOff = false;
+        bStandingStill = false;
+        bFilmCabinetOpen = false;
 
         //Reset Puzzle 2
-        analogWrite(torchLED, 0);
-        analogWrite(coffinUVLED, 0);
-        puzzle2Complete = false;
-        torch1Placed = false;
-        torch2Placed = false;
-        torch3Placed = false;
-        torch4Placed = false;
-        torch5Placed = false;
-        coffinOpen = false;
+        analogWrite(TORCH_LED, 0);
+        analogWrite(COFFIN_UVLED, 0);
+        bPuzzle2Complete = false;
+        bTorch1Placed = false;
+        bTorch2Placed = false;
+        bTorch3Placed = false;
+        bTorch4Placed = false;
+        bTorch5Placed = false;
+        bCoffinOpen = false;
 
         //Reset Puzzle 3
-        analogWrite(candleLED, 0);
-        analogWrite(skullLED, 0);
-        analogWrite(mirrorLED, 0);
-        puzzle3Complete = false;
+        analogWrite(CANDLE_LED, 0);
+        analogWrite(SKULL_LED, 0);
+        analogWrite(MIRROR_LED, 0);
+        bPuzzle3Complete = false;
         puzzle3State = -1;
-        candlePlaced = false;
-        skullPlaced = false;
-        demon1Placed = false;
-        demon2Placed = false;
-        demon3Placed = false;
+        bCandlePlaced = false;
+        bSkullPlaced = false;
+        bDemon1Placed = false;
+        bDemon2Placed = false;
+        bDemon3Placed = false;
 
         //Reset Puzzle 4
-        puzzle4Complete = false;
+        bPuzzle4Complete = false;
 
-        updateCrypt = false;
+        //open all MagLocks
+        Serial.println(F("Open all maglocks"));
+        digitalWrite(CRYPT_DOOR_MAGLOCK, LOW);
+        delay(5000);
+        //close all mag locks
+        Serial.println(F("Close all maglocks"));
+        digitalWrite(CRYPT_DOOR_MAGLOCK, HIGH);
+
+        delay(1000);
+
+        bUpdateCrypt = false;
       }
+
+
+
       //Test functions
-      //puzzleInputTest();
-      //ledTest(0);
+      // checkResetSwitch(2000);
+      // checkPuzzleOverrides(2000);
 
-      //open all MagLocks
-      Serial.println("Open all maglocks");
-      digitalWrite(filmCabinetMagLock, LOW);
-      digitalWrite(coffinMagLock, LOW);
-      delay(5000);
-      //close all mag locks
-      Serial.println("Close all maglocks");
-      digitalWrite(filmCabinetMagLock, HIGH);
-      digitalWrite(coffinMagLock, HIGH);
+      //inputTest_puzzle1();
+      //inputTest_puzzle2();
+      // inputTest_puzzle3();
+      inputTest_puzzle4();
 
-      delay(1000);
+      // ledTest(255);
+
       //Start game
-      getCryptState(puzzle1);
+      getCryptState(PUZZLE_1);
 
       break;
 
-    case puzzle1:
+    case PUZZLE_1:
 
-      if (updateCrypt == true) {
+      if (bUpdateCrypt == true) {
         if (DEBUG) {
-          Serial.println("Puzzle 1");
+          Serial.println(F("Puzzle 1"));
         }
-        digitalWrite(lightBarLED, LOW);
-        digitalWrite(lightningLED, LOW);
-        puzzle1Complete = false;
-        lightsOff = false;
-        standingStill = false;
-        filmCabinetOpen = false;
+        digitalWrite(LIGHT_BAR_LED, LOW);
+        digitalWrite(LIGHTNING_LED, LOW);
+        bPuzzle1Complete = false;
+        bLightsOff = false;
+        bStandingStill = false;
+        bFilmCabinetOpen = false;
         trackIndex = 1;
-        puzzle1State = puzzle1A;
+        puzzle1State = PUZZLE_1_A;
         playFileFlag = 1;
-        updateCrypt = false;
+        bUpdateCrypt = false;
       }
 
       switch (puzzle1State) {
 
-        case puzzle1A:
+        case PUZZLE_1_A:
 
-          if (playFileFlag == 1 && puzzle1Complete == false) {
+          if (playFileFlag == 1 && bPuzzle1Complete == false) {
             audioPlayer.startPlayingFile(trackNames[trackIndex]);
             playFileFlag -= 1;
           }
-          if (audioPlayer.stopped() && puzzle1Complete == false) {
+
+          if (audioPlayer.stopped() && bPuzzle1Complete == false) {
             playFileFlag = 1;
           }
 
           if (audioPlayer.playingMusic) {
 
-            checkResetSwitch();
-            checkPuzzleOverrides();
+            checkResetSwitch(RESET_SWITCH_INTERVAL);
+            checkPuzzleOverrides(PUZZLE_OVERRIDE_INTERVAL);
 
             lightBarSwitch.update();
             filmCabinetReed.update();
+            motionSensor.update();
 
             if (lightBarSwitch.read() == 1) {
-              lightsOff = true;
-              analogWrite(lightBarLED, 0);
+              bLightsOff = true;
+              analogWrite(LIGHT_BAR_LED, 0);
             } else if (lightBarSwitch.read() == 0) {
-              lightsOff = false;
-              analogWrite(lightBarLED, 200);
+              bLightsOff = false;
+              analogWrite(LIGHT_BAR_LED, 200);
             }
 
-            if (filmCabinetReed.fell()) {
-              filmCabinetOpen = false;
-            } else if (filmCabinetReed.rose()) {
-              filmCabinetOpen = true;
+            if (filmCabinetReed.read() == 1) {
+              bFilmCabinetOpen = true;
             }
 
-            int motionVal = digitalRead(motionSensorPin);
-            if (motionVal == 0) {
-              standingStill = true;
-            } else {
-              standingStill = false;
-              standStillTime = 0;
+            if (motionSensor.read() == 0) {
+              bStandingStill = true;
+            } else if (motionSensor.read() == 1) {
+              bStandingStill = false;
             }
 
-            int puzzle1Sum = lightsOff + standingStill + filmCabinetOpen;
+            int puzzle1Sum = bLightsOff + bStandingStill + bFilmCabinetOpen;
 
             cryptCurrent = millis();
 
-            if (cryptCurrent - cryptPrevious > cryptInterval) {
+            if (cryptCurrent - cryptPrevious > CRYPT_INTERVAL) {
               cryptPrevious = cryptCurrent;
 
               if (puzzle1Sum < 3) {
                 standStillTime = 0;
                 audioPlayer.setVolume(0, 0);
                 if (DEBUG) {
-                  Serial.print("L: ");
-                  Serial.print(lightsOff);
-                  Serial.print(" ");
-                  Serial.print("SS: ");
-                  Serial.print(standingStill);
-                  Serial.print(" ");
-                  Serial.print("FC: ");
-                  Serial.print(filmCabinetOpen);
-                  Serial.print(" ");
-                  Serial.print("Sum: ");
+                  Serial.print(F("Lights Off: "));
+                  Serial.print(bLightsOff);
+                  Serial.print(F(" "));
+                  Serial.print(F("Standing Still: "));
+                  Serial.print(bStandingStill);
+                  Serial.print(F(" "));
+                  Serial.print(F("Film Cabinet Open: "));
+                  Serial.print(bFilmCabinetOpen);
+                  Serial.print(F(" "));
+                  Serial.print(F("Sum: "));
                   Serial.println(puzzle1Sum);
                 }
               } else if (puzzle1Sum == 3) {
 
                 standStillTime += 1;
+
                 if (standStillTime >= 100) {
-                  puzzle1Complete = true;
-                audioPlayer.stopPlaying();
-                  Serial.println("Puzzle 1 complete");
-                  // playFileFlag = 0;
-                  //puzzle1State = puzzle1B;
+                  bPuzzle1Complete = true;
+                  audioPlayer.stopPlaying();
+                  Serial.println(F("Puzzle 1 complete"));
+
                 } else if (standStillTime < 100) {
                   audioPlayer.setVolume(standStillTime, standStillTime);
                 }
 
                 if (DEBUG) {
-                  Serial.print("Standing Stil For : ");
+                  Serial.print(F("Standing Stil For : "));
                   Serial.println(standStillTime);
                 }
               }
 
-              if (puzzle1Complete == true) {
-                Serial.println("Puzzle 1 Complete");
+              if (bPuzzle1Complete == true) {
+                Serial.println(F("Puzzle 1 Complete"));
                 audioPlayer.stopPlaying();
                 playFileFlag = 1;
-                puzzle1State = puzzle1B;
+                puzzle1State = PUZZLE_1_B;
               }
 
             }//end timer loop
           }//end music playing loop
           break;
 
-        case puzzle1B:
-          // Serial.println("thunder");
+        //Thunder music state
+        case PUZZLE_1_B:
+
           trackIndex = 2;
           audioPlayer.setVolume(0, 0);
 
@@ -532,51 +575,48 @@ void loop() {
 
           if (audioPlayer.playingMusic) {
 
-            checkResetSwitch();
-            checkPuzzleOverrides();
+            checkResetSwitch(RESET_SWITCH_INTERVAL);
+            checkPuzzleOverrides(PUZZLE_OVERRIDE_INTERVAL);
 
-            analogWrite(lightningLED, 200);
-            delay(100);
-            analogWrite(lightningLED, 0);
-            delay(50);
-            analogWrite(lightningLED, 200);
-            delay(100);
-            analogWrite(lightningLED, 0);
-            delay(50);
-            analogWrite(lightningLED, 200);
-            delay(100);
-            analogWrite(lightningLED, 0);
-            delay(50);
+            //Switches every CRYPT_INTERVAL
+            bLightningFlash = !bLightningFlash;
+
+            if (bLightningFlash == true) {
+              analogWrite(LIGHTNING_LED, 200);
+            } else if (bLightningFlash == false) {
+              analogWrite(LIGHTNING_LED, 0);
+            }
+
           }
 
           if (audioPlayer.stopped()) {
-            // playFileFlag = 1;
-            getCryptState(puzzle2);
-            // Serial.println("Song Stop");
+            //Open crypt door
+            digitalWrite(CRYPT_DOOR_MAGLOCK, HIGH);
+            getCryptState(PUZZLE_2);
           }
           break;
       }
 
       break;
 
-    case puzzle2:
+    case PUZZLE_2:
 
-      if (updateCrypt == true) {
+      if (bUpdateCrypt == true) {
         if (DEBUG) {
-          Serial.println("Puzzle 2");
+          Serial.println(F("Puzzle 2"));
         }
-        puzzle2Complete = false;
-        analogWrite(torchLED, 0);
-        analogWrite(coffinUVLED, 0);
-        torch1Placed = false;
-        torch2Placed = false;
-        torch3Placed = false;
-        torch4Placed = false;
-        torch5Placed = false;
-        coffinOpen = false;
-        coffinOpenCounter = 0;
+        bPuzzle2Complete = false;
+        analogWrite(TORCH_LED, 0);
+        analogWrite(COFFIN_UVLED, 0);
+        bTorch1Placed = false;
+        bTorch2Placed = false;
+        bTorch3Placed = false;
+        bTorch4Placed = false;
+        bTorch5Placed = false;
+        bCoffinOpen = false;
+        bCoffinOpenFirstTime = false;
         trackIndex = 3;
-        updateCrypt = false;
+        bUpdateCrypt = false;
       }
 
       audioPlayer.setVolume(0, 0);
@@ -592,277 +632,278 @@ void loop() {
       while (audioPlayer.playingMusic) {
 
 
-        checkResetSwitch();
-        checkPuzzleOverrides();
+        checkResetSwitch(RESET_SWITCH_INTERVAL);
+        checkPuzzleOverrides(PUZZLE_OVERRIDE_INTERVAL);
 
+        //Keep control of lights active
         lightBarSwitch.update();
+        if (lightBarSwitch.read() == 1) {
+          analogWrite(LIGHT_BAR_LED, 0);
+        } else if (lightBarSwitch.read() == 0) {
+          analogWrite(LIGHT_BAR_LED, 200);
+        }
+
+        //Check coffin.  If opened once, active LED control
+        coffinReed.update();
+        if (coffinReed.read() == 1) {
+          bCoffinOpen = true;
+        }
+
+        if (bCoffinOpen == true && coffinReed.read() == 0) {
+          analogWrite(COFFIN_UVLED, 255);
+        } else {
+          analogWrite(COFFIN_UVLED, 0);
+        }
+
+        //Check torches
         torch1Reed.update();
         torch2Reed.update();
         torch3Reed.update();
         torch4Reed.update();
         torch5Reed.update();
-        coffinReed.update();
 
-        if (lightBarSwitch.read() == 1) {
-          lightsOff = true;
-          analogWrite(lightBarLED, 0);
-        } else if (lightBarSwitch.read() == 0) {
-          lightsOff = false;
-          analogWrite(lightBarLED, 200);
+        //Current setup is for use with buttons
+        //Change the 1 to a 0 when using a reed switch
+        if (torch1Reed.read() == 1) {
+          bTorch1Placed = true;
+        } else {
+          bTorch1Placed = false;
         }
 
-        if (torch1Reed.fell()) {
-          torch1Placed = true;
-        } else if (torch1Reed.rose()) {
-          torch1Placed = false;
+        if (torch2Reed.read() == 1) {
+          bTorch2Placed = true;
+        } else {
+          bTorch2Placed = false;
         }
 
-        if (torch2Reed.fell()) {
-          torch2Placed = true;
-        } else if (torch2Reed.rose()) {
-          torch2Placed = false;
+        if (torch3Reed.read() == 1) {
+          bTorch3Placed = true;
+        } else {
+          bTorch3Placed = false;
         }
 
-        if (torch3Reed.fell()) {
-          torch3Placed = true;
-        } else if (torch3Reed.rose()) {
-          torch3Placed = false;
+        if (torch4Reed.read() == 1) {
+          bTorch4Placed = true;
+        } else {
+          bTorch4Placed = false;
         }
 
-        if (torch4Reed.fell()) {
-          torch4Placed = true;
-        } else if (torch4Reed.rose()) {
-          torch4Placed = false;
+        if (torch5Reed.read() == 1) {
+          bTorch5Placed = true;
+        } else {
+          bTorch5Placed = false;
         }
 
-        if (torch5Reed.fell()) {
-          torch5Placed = true;
-        } else if (torch5Reed.rose()) {
-          torch5Placed = false;
-        }
-
-        int torchValSum = torch1Placed + torch2Placed + torch3Placed + torch4Placed + torch5Placed;
+        int torchValSum = bTorch1Placed + bTorch2Placed + bTorch3Placed + bTorch4Placed + bTorch5Placed;
 
         cryptCurrent = millis();
-        if (cryptCurrent - cryptPrevious >= cryptInterval) {
+        if (cryptCurrent - cryptPrevious >= CRYPT_INTERVAL) {
 
           if (torchValSum < 5) {
             if (DEBUG) {
-              Serial.print("T1: ");
-              Serial.print(torch1Placed);
-              Serial.print(" ");
-              Serial.print("T2: ");
-              Serial.print(torch2Placed);
-              Serial.print(" ");
-              Serial.print("T3: ");
-              Serial.print(torch3Placed);
-              Serial.print(" ");
-              Serial.print("T4: ");
-              Serial.print(torch4Placed);
-              Serial.print(" ");
-              Serial.print("T5: ");
-              Serial.print(torch5Placed);
-              Serial.print(" ");
-              Serial.print("C: ");
-              Serial.print(coffinOpen);
-              Serial.print(" ");
-              Serial.print("T Sum: ");
+              Serial.print(F("T1: "));
+              Serial.print(bTorch1Placed);
+              Serial.print(F(" "));
+              Serial.print(F("T2: "));
+              Serial.print(bTorch2Placed);
+              Serial.print(F(" "));
+              Serial.print(F("T3: "));
+              Serial.print(bTorch3Placed);
+              Serial.print(F(" "));
+              Serial.print(F("T4: "));
+              Serial.print(bTorch4Placed);
+              Serial.print(F(" "));
+              Serial.print(F("T5: "));
+              Serial.print(bTorch5Placed);
+              Serial.print(F(" "));
+              Serial.print(F("T Sum: "));
               Serial.println(torchValSum);
             }
 
-            analogWrite(torchLED, 0);
-            analogWrite(coffinUVLED, 0);
+            analogWrite(TORCH_LED, 0);
 
           } else if (torchValSum == 5) {
 
             if (DEBUG) {
-              Serial.println("Torches Placed");
+              Serial.println(F("Torches Placed"));
             }
-            puzzle2Complete = true;
-          }
-
-          if (puzzle2Complete == true) {
 
             torchLEDVal += torchIncrement;
             if (torchLEDVal >= 255 || torchLEDVal <= 0) {
               torchIncrement = -torchIncrement;
             }
+            analogWrite(TORCH_LED, torchLEDVal);
 
-            analogWrite(torchLED, torchLEDVal);
-
-            //Open mag lock
-
-
-            //Count times coffin has been opened.
-            if (coffinReed.fell()) {
-              coffinOpen = true;
-              coffinOpenCounter += 1;
-            } else if (coffinReed.rose()) {
-              coffinOpen = false;
-              coffinOpenCounter += 1;
-            }
-            //If coffin lid opens once then is closed, the LED turns on
-            if (coffinOpenCounter % 2 == 0 && coffinOpenCounter > 0) {
-              analogWrite(coffinUVLED, 255);
-            } else {
-              analogWrite(coffinUVLED, 0);
-            }
-
-            if (DEBUG) {
-              Serial.println(coffinOpenCounter);
-            }
-
-            getCryptState(puzzle3);
-
+            bPuzzle2Complete = true;
           }
 
+          if (bPuzzle2Complete == true) {
+            audioPlayer.stopPlaying();
+            getCryptState(PUZZLE_3);
+          }
           cryptPrevious = cryptCurrent;
         }
       }
+
       break;
 
-    case puzzle3:
+    case PUZZLE_3:
 
-      if (updateCrypt == true) {
+      if (bUpdateCrypt == true) {
         if (DEBUG) {
-          Serial.println("Puzzle 3");
+          Serial.println(F("Puzzle 3"));
         }
 
-        analogWrite(candleLED, 0);
-        analogWrite(skullLED, 0);
-        analogWrite(mirrorLED, 0);
-        puzzle3Complete = false;
-        candlePlaced = false;
-        skullPlaced = false;
-        demon1Placed = false;
-        demon2Placed = false;
-        demon3Placed = false;
-        puzzle3State = puzzle3A;
+        analogWrite(CANDLE_LED, 0);
+        analogWrite(SKULL_LED, 0);
+        analogWrite(MIRROR_LED, 0);
+        bPuzzle3Complete = false;
+        bCandlePlaced = false;
+        bSkullPlaced = false;
+        bDemon1Placed = false;
+        bDemon2Placed = false;
+        bDemon3Placed = false;
+        puzzle3State = PUZZLE_3_A;
         trackIndex = 3;
-        updateCrypt = false;
+        bUpdateCrypt = false;
       }
 
 
       switch (puzzle3State) {
 
-        case puzzle3A:
+        case PUZZLE_3_A:
 
           audioPlayer.setVolume(0, 0);
           if (playFileFlag == 1) {
             audioPlayer.startPlayingFile(trackNames[trackIndex]);
             playFileFlag -= 1;
           }
-          if (audioPlayer.stopped() && puzzle3Complete == false) {
+          if (audioPlayer.stopped() && bPuzzle3Complete == false) {
             playFileFlag = 1;
           }
 
           while (audioPlayer.playingMusic) {
 
-            checkResetSwitch();
-            checkPuzzleOverrides();
+            checkResetSwitch(RESET_SWITCH_INTERVAL);
+            checkPuzzleOverrides(PUZZLE_OVERRIDE_INTERVAL);
 
+
+            //Keep lightbar switch active
             lightBarSwitch.update();
+            if (lightBarSwitch.read() == 1) {
+              analogWrite(LIGHT_BAR_LED, 0);
+            } else if (lightBarSwitch.read() == 0) {
+              analogWrite(LIGHT_BAR_LED, 200);
+            }
+
+            //Keep coffin elements going
+            coffinReed.update();
+            if (bCoffinOpen == true && coffinReed.read() == 0) {
+              analogWrite(COFFIN_UVLED, 255);
+            } else {
+              analogWrite(COFFIN_UVLED, 0);
+            }
+
+            //Puzzle 3 elements
             candleReed.update();
             skullReed.update();
             demon1Reed.update();
             demon2Reed.update();
             demon3Reed.update();
 
-            if (lightBarSwitch.read() == 1) {
-              lightsOff = true;
-              analogWrite(lightBarLED, 0);
-            } else if (lightBarSwitch.read() == 0) {
-              lightsOff = false;
-              analogWrite(lightBarLED, 200);
+            //Make sure to adjust value for reed switches
+            if (candleReed.read() == 1) {
+              bCandlePlaced = true;
+              analogWrite(CANDLE_LED, 255);
+            } else {
+              bCandlePlaced = false;
+              analogWrite(CANDLE_LED, 0);
             }
 
-
-            torchLEDVal += torchIncrement;
-            if (torchLEDVal >= 255 || torchLEDVal <= 0) {
-              torchIncrement = -torchIncrement;
-            }
-            analogWrite(torchLED, torchLEDVal);
-
-
-            if (candleReed.fell()) {
-              candlePlaced = true;
-            } else if (candleReed.rose()) {
-              candlePlaced = false;
+            if (skullReed.read() == 1) {
+              bSkullPlaced = true;
+              analogWrite(SKULL_LED, 255);
+            } else {
+              bSkullPlaced = false;
+              analogWrite(SKULL_LED, 0);
             }
 
-            if (skullReed.fell()) {
-              torch2Placed = true;
-            } else if (skullReed.rose()) {
-              torch2Placed = false;
+            if (demon1Reed.read() == 1) {
+              bDemon1Placed = true;
+            } else {
+              bDemon1Placed = false;
             }
 
-            if (demon1Reed.fell()) {
-              demon1Placed = true;
-            } else if (demon1Reed.rose()) {
-              demon1Placed = false;
+            if (demon2Reed.read() == 1) {
+              bDemon2Placed = true;
+            } else {
+              bDemon2Placed = false;
             }
 
-            if (demon2Reed.fell()) {
-              demon2Placed = true;
-            } else if (demon2Reed.rose()) {
-              demon2Placed = false;
-            }
-
-            if (demon3Reed.fell()) {
-              demon3Placed = true;
-            } else if (demon3Reed.rose()) {
-              demon3Placed = false;
+            if (demon3Reed.read() == 1) {
+              bDemon3Placed = true;
+            } else {
+              bDemon3Placed = false;
             }
 
             cryptCurrent = millis();
-            if (cryptCurrent - cryptPrevious >= cryptInterval) {
+            if (cryptCurrent - cryptPrevious >= CRYPT_INTERVAL) {
 
-              int puzzle3Sum = candlePlaced + skullPlaced + demon1Placed + demon2Placed + demon3Placed;
+              //Keep pulsing the torches
+              torchLEDVal += torchIncrement;
+              if (torchLEDVal >= 255 || torchLEDVal <= 0) {
+                torchIncrement = -torchIncrement;
+              }
+              analogWrite(TORCH_LED, torchLEDVal);
+
+
+              int puzzle3Sum = bCandlePlaced + bSkullPlaced + bDemon1Placed + bDemon2Placed + bDemon3Placed;
 
               if (puzzle3Sum < 5) {
 
                 if (DEBUG) {
-                  Serial.print("Candle: ");
-                  Serial.print(candlePlaced);
-                  Serial.print(" ");
-                  Serial.print("Skull: ");
-                  Serial.print(skullPlaced);
-                  Serial.print(" ");
-                  Serial.print("Demon 1: ");
-                  Serial.print(demon1Placed);
-                  Serial.print(" ");
-                  Serial.print("Demon 2: ");
-                  Serial.print(demon2Placed);
-                  Serial.print(" ");
-                  Serial.print("Demon 3: ");
-                  Serial.print(demon3Placed);
-                  Serial.print(" ");
-                  Serial.print("Puzzle 3 Sum: ");
+                  Serial.print(F("Candle: "));
+                  Serial.print(bCandlePlaced);
+                  Serial.print(F(" "));
+                  Serial.print(F("Skull: "));
+                  Serial.print(bSkullPlaced);
+                  Serial.print(F(" "));
+                  Serial.print(F("Demon 1: "));
+                  Serial.print(bDemon1Placed);
+                  Serial.print(F(" "));
+                  Serial.print(F("Demon 2: "));
+                  Serial.print(bDemon2Placed);
+                  Serial.print(F(" "));
+                  Serial.print(F("Demon 3: "));
+                  Serial.print(bDemon3Placed);
+                  Serial.print(F(" "));
+                  Serial.print(F("Puzzle 3 Sum: "));
                   Serial.println(puzzle3Sum);
                 }
 
-                analogWrite(mirrorLED, 0);
+                analogWrite(MIRROR_LED, 0);
 
               } else if (puzzle3Sum == 5) {
-                puzzle3Complete = true;
-                audioPlayer.stopPlaying();
+                bPuzzle3Complete = true;
               }
 
-              if (puzzle3Complete == true) {
+              if (bPuzzle3Complete == true) {
                 if (DEBUG) {
-                  Serial.println("!!!!!THE BEAST!!!!!");
+                  Serial.println(F("!!!!!THE BEAST!!!!!"));
                 }
-                playFileFlag = 3;
-                puzzle3State = puzzle3B;
+                analogWrite(MIRROR_LED, 255);
+                audioPlayer.stopPlaying();
+                playFileFlag = 1;
+                puzzle3State = PUZZLE_3_B;
               }
-
               cryptPrevious = cryptCurrent;
             }
           }
 
           break;
 
-        case puzzle3B:
+        //Beast music state
+        case PUZZLE_3_B:
           trackIndex = 4;
           audioPlayer.setVolume(0, 0);
 
@@ -872,29 +913,26 @@ void loop() {
           }
 
           if (audioPlayer.playingMusic) {
-            checkResetSwitch();
-            checkPuzzleOverrides();
-            analogWrite(lightBarLED, 0);
-            analogWrite(mirrorLED, 200);
+            checkResetSwitch(RESET_SWITCH_INTERVAL);
+            checkPuzzleOverrides(PUZZLE_OVERRIDE_INTERVAL);
+            analogWrite(LIGHT_BAR_LED, 0);
+            analogWrite(MIRROR_LED, 200);
           }
           if (audioPlayer.stopped()) {
-            getCryptState(puzzle4);
+            getCryptState(PUZZLE_4);
           }
           break;
-
       }
-
-
       break;
 
-    case puzzle4:
-      if (updateCrypt == true) {
+    case PUZZLE_4:
+      if (bUpdateCrypt == true) {
         if (DEBUG) {
-          Serial.println("Puzzle 4");
+          Serial.println(F("Puzzle 4"));
         }
         trackIndex = 3;//play scary music?
-        puzzle4Complete = false;
-        updateCrypt = false;
+        bPuzzle4Complete = false;
+        bUpdateCrypt = false;
       }
 
       audioPlayer.setVolume(0, 0);
@@ -908,36 +946,46 @@ void loop() {
 
       while (audioPlayer.playingMusic) {
 
-        checkResetSwitch();
-        checkPuzzleOverrides();
+        checkResetSwitch(RESET_SWITCH_INTERVAL);
+        checkPuzzleOverrides(PUZZLE_OVERRIDE_INTERVAL);
+
+        //Keep coffin elements going
+        coffinReed.update();
+        if (bCoffinOpen == true && coffinReed.read() == 0) {
+          analogWrite(COFFIN_UVLED, 255);
+        } else {
+          analogWrite(COFFIN_UVLED, 0);
+        }
+
 
         cryptCurrent = millis();
-        if (cryptCurrent - cryptPrevious >= cryptInterval) {
+        if (cryptCurrent - cryptPrevious >= CRYPT_INTERVAL) {
 
-          //May need to adjust threshold
-          int touchVal = analogRead(touchSensorPin);
-          if (touchVal > touchThreshold) {
+          //Keep pulsing the torches
+          torchLEDVal += torchIncrement;
+          if (torchLEDVal >= 255 || torchLEDVal <= 0) {
+            torchIncrement = -torchIncrement;
+          }
+          analogWrite(TORCH_LED, torchLEDVal);
+
+          int touchVal = analogRead(TOUCH_SENSOR_PIN);
+          if (touchVal < TOUCH_THRESHOLD) {
             if (DEBUG) {
-              Serial.print("Touch Val: ");
+              Serial.print(F("Touch Val: "));
               Serial.println(touchVal);
             }
-          } else if (touchVal < touchThreshold) {
-            puzzle4Complete = true;
+          } else if (touchVal > TOUCH_THRESHOLD) {
+            bPuzzle4Complete = true;
           }
 
-          int puzzle4OverrideVal = digitalRead(puzzle4OverridePin);
-
-          if (puzzle4OverrideVal == 1) {
-            puzzle4Complete = true;
-          }
-
-          if (puzzle4Complete == true) {
+          if (bPuzzle4Complete == true) {
             if (DEBUG ) {
-              Serial.println("ESCAPED THE GAME!!");
+              Serial.println(F("ESCAPED THE GAME!!"));
             }
             delay(2000);
+            playFileFlag = 1;
             audioPlayer.stopPlaying();
-            getCryptState(winnerState);
+            getCryptState(WINNER_STATE);
           }
           cryptPrevious = cryptCurrent;
         }
@@ -946,16 +994,16 @@ void loop() {
 
       break;
 
-    case winnerState:
+    case WINNER_STATE:
 
-      if (updateCrypt == true) {
+      if (bUpdateCrypt == true) {
         if (DEBUG) {
-          Serial.println("Winner State");
-          Serial.println("Congrats!");
+          Serial.println(F("Winner State"));
+          Serial.println(F("Congrats!"));
         }
         trackIndex = 5;//play end music
-        puzzle4Complete = false;
-        updateCrypt = false;
+        bPuzzle4Complete = false;
+        bUpdateCrypt = false;
       }
 
 
@@ -964,13 +1012,9 @@ void loop() {
         audioPlayer.startPlayingFile(trackNames[trackIndex]);
         playFileFlag -= 1;
       }
-      if (audioPlayer.stopped()) {
-        //playFileFlag = 1;
-        getCryptState(resetState);
-      }
 
-      while (audioPlayer.playingMusic) {
-        checkResetSwitch();
+      if (audioPlayer.stopped()) {
+        getCryptState(RESET_STATE);
       }
 
       break;
@@ -982,29 +1026,86 @@ void loop() {
 
 
 void ledTest(int val) {
+  analogWrite(LIGHT_BAR_LED, val);
+  analogWrite(LIGHTNING_LED, val);
+  analogWrite(TORCH_LED, val);
+  analogWrite(COFFIN_UVLED, val);
+  analogWrite(CANDLE_LED, val);
+  analogWrite(SKULL_LED, val);
+  analogWrite(MIRROR_LED, val);
+}
 
-  analogWrite(lightBarLED, val);
-  analogWrite(lightningLED, val);
-  analogWrite(torchLED, val);
-  analogWrite(coffinUVLED, val);
-  analogWrite(candleLED, val);
-  analogWrite(skullLED, val);
-  analogWrite(mirrorLED, val);
+void inputTest_puzzle1() {
+
+  lightBarSwitch.update();
+  filmCabinetReed.update();
+  motionSensor.update();
+
+  Serial.print("LightBar: ");
+  Serial.print(lightBarSwitch.read());
+  Serial.print("Film Cab Reed: ");
+  Serial.print(filmCabinetReed.read());
+  Serial.print("Motion: ");
+  Serial.println(motionSensor.read());
+
+}
+void inputTest_puzzle2() {
+
+  torch1Reed.update();
+  torch2Reed.update();
+  torch3Reed.update();
+  torch4Reed.update();
+  torch5Reed.update();
+  coffinReed.update();
+
+  Serial.print("Torch 1: ");
+  Serial.print(torch1Reed.read());
+  Serial.print("Torch 2: ");
+  Serial.print(torch2Reed.read());
+  Serial.print("Torch 3: ");
+  Serial.print(torch3Reed.read());
+  Serial.print("Torch 4: ");
+  Serial.print(torch4Reed.read());
+  Serial.print("Torch 5: ");
+  Serial.print(torch5Reed.read());
+  Serial.print("Coffin: ");
+  Serial.println(coffinReed.read());
+
+}
+void inputTest_puzzle3() {
+
+
+  candleReed.update();
+  skullReed.update();
+  demon1Reed.update();
+  demon2Reed.update();
+  demon3Reed.update();
+
+  Serial.print("Candle: ");
+  Serial.print(candleReed.read());
+  Serial.print("Skull: ");
+  Serial.print(skullReed.read());
+  Serial.print("Demon 1: ");
+  Serial.print(demon1Reed.read());
+  Serial.print("Demon 2: ");
+  Serial.print(demon2Reed.read());
+  Serial.print("Demon 3: ");
+  Serial.print(demon3Reed.read());
 
 }
 
 
+void inputTest_puzzle4() {
 
-void puzzleInputTest() {
-
-
+  Serial.print("Touch Sensor: ");
+  Serial.println(analogRead(TOUCH_SENSOR_PIN));
 
 }
+
 
 
 void printDirectory(File dir, int numTabs) {
   while (true) {
-
     File entry =  dir.openNextFile();
     if (! entry) {
       //Serial.println("**nomorefiles**");
